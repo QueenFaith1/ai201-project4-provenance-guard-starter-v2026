@@ -44,60 +44,30 @@ Two things worth knowing before you pick numbers:
 ---
 ## 1.
 
-<!-- Your criterion. It must name a number. -->
-
-
-
-**Why this target:**
-
-
-
+False positive :- out of 5 human pieces, at most 1 labeled high confidence AI. Why, because a wrongful accusation damages a real writer.
 ---
 
 ## 2.
 
-<!-- Your criterion. -->
-
-
-
-**Why this target:**
-
-
+Score spread :- Average of 5 AI texts at least 0.2 higher than 5 human texts. Why, because if the gap is small, the detector can’t tell them apart and the labels become guesses.
 
 ---
 
 ## 3.
 
-<!-- Your criterion. -->
-
-
-
-**Why this target:**
-
-
+Label Coverage:- : across 10 test inputs, all 3 labels appear at least once. If the unsure label never appears, a borderline human piece gets forced into AI, and the writer is punished
 
 ---
 
 ## 4.
 
-<!-- Your criterion. -->
-
-
-
-**Why this target:**
-
-
+Appeal Path:- : 5 of 5 appeals return under_review and add an entry to logs/audit.jsonl.why, because if appeals never appear, then the writer is unable to prove that the poem is original.
 
 ---
 
 ## 5.
 
-<!-- Your criterion. -->
-
-
-
-**Why this target:**
-
+Bad Input:- missing or empty text returns 400 with an error message.why, because without an error, a bad request would look like a normal result, so someone could treat an empty or broken submission as if it had been checked
 
 
 ---
