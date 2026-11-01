@@ -30,6 +30,7 @@ from flask import Flask, jsonify, request
 
 import audit
 import config
+import detector
 
 app = Flask(__name__)
 
@@ -202,14 +203,40 @@ def submit():
     payload = request.get_json(silent=True) or {}
 
     # TODO: delete this and build the route.
+
+
+
+
+    payload = request.get_json(silent=True) or {}
+
+    text = payload.get("text")
+    creator_id = payload.get("creator_id")
+
+    if not isinstance(text, str) or not text.strip():
+        return jsonify({"error": "bad_request", "message": "text is required"}), 400
+    if not isinstance(creator_id, str) or not creator_id.strip():
+        return jsonify({"error": "bad_request", "message": "creator_id is required"}), 400
+
+    content_id = str(uuid.uuid4())
+    model_score = detector.model_signal(text)
+
+    audit.log_decision(
+        content_id=content_id,
+        creator_id=creator_id,
+        guess="pending",
+        model_score=model_score,
+        label="placeholder",
+    )
+
     return jsonify({
-        "error": "not_implemented",
-        "message": "POST /submit isn't built yet — see the TODO in app.py.",
-        "you_sent": {
-            "text_length": len(payload.get("text", "")),
-            "creator_id": payload.get("creator_id"),
-        },
-    }), 501
+        "content_id": content_id,
+        "guess": "pending",
+        "confidence": None,
+        "label": "placeholder",
+        "model_score": model_score,
+        "style_score": None,
+    }), 200
+
 
 
 @app.post("/appeal")
