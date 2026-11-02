@@ -86,13 +86,13 @@ def score_to_label(score: float) -> tuple[str, str]:
     milestone.
     """
     # TODO: replace this — thresholds are in config.py
+    
     if score >= config.AI_THRESHOLD:
-        return "ai", "PLACEHOLDER — write the high-confidence AI label."
+        return "ai", "This looks like it may have been written with an AI tool. If you wrote it yourself, you can appeal and a person will review it."
     if score <= config.HUMAN_THRESHOLD:
-        return "human", "PLACEHOLDER — write the high-confidence human label."
-    return "unsure", "PLACEHOLDER — write the unsure label."
-
-
+        return "human", "We think this was probably written by a person."
+    return "unsure", "We can't tell for sure whether a person or an AI wrote this. If you wrote it yourself, you can appeal and a person will take a look."   
+    
 def label_ranges() -> list[tuple[str, str]]:
     """
     The score range each label covers. Your README needs these beside the

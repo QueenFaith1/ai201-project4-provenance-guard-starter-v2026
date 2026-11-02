@@ -268,6 +268,25 @@ def appeal():
     wrong accusation and nothing at all.
     """
     payload = request.get_json(silent=True) or {}
+    content_id = payload.get("content_id")
+    reasoning = payload.get("reasoning")
+
+    if not isinstance(content_id, str) or not content_id.strip():
+        return jsonify({"error": "bad_request", "message": "content_id is required"}), 400
+    if not isinstance(reasoning, str) or not reasoning.strip():
+        return jsonify({"error": "bad_request", "message": "reasoning is required"}), 400
+
+    entries = audit.entries_for(content_id)
+    if not entries:
+        return jsonify({"error": "not_found", "message": "No submission with that content_id."}), 404
+
+    audit.log_appeal(content_id, entries[0]["creator_id"], reasoning)
+
+    return jsonify({
+        "content_id": content_id,
+        "status": "under_review",
+        "message": "Your appeal has been recorded. A person will review this decision.",
+    }), 200
 
     # TODO: delete this and build the route.
     return jsonify({
