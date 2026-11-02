@@ -64,8 +64,13 @@ def sentence_length_spread(text: str) -> float:
     `stdev` raises on fewer than two values. Decide what that should return
     before the attack set decides for you.
     """
-    # TODO: replace this
-    return 0.0
+    lengths = [len(words(s)) for s in sentences(text)]
+    if len(lengths) < 2:
+           return 0.0
+    mean = statistics.mean(lengths)
+    if mean == 0:
+           return 0.0
+    return statistics.stdev(lengths) / mean
 
 
 def type_token_ratio(text: str) -> float:
@@ -122,9 +127,10 @@ def style_signal(text: str) -> float:
     you trust it. Plain and ordinary, not formal: formal prose reads as *human*
     to signal one, and it is plain writing that gets accused.
     """
-    # TODO: replace this
-    return 0.5
-
+    if len(sentences(text)) < 2:
+        return 0.5
+    spread = sentence_length_spread(text)
+    return 1.0 - min(spread / 0.8, 1.0)
 
 if __name__ == "__main__":
     import sys
