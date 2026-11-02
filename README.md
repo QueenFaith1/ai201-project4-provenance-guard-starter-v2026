@@ -34,76 +34,31 @@
 
 <!-- ═══════════════════════ UNIT 7 — THE BUILD ═══════════════════════ -->
 
+# Provenance Guard
+
 ## What This Does
 
-<!-- The path a submission takes, from arriving to the label a reader sees.
-     Six or seven steps — this is the trace you wrote in Milestone 1. -->
-
-
-
----
+Provenance Guard is a small web service that guesses whether a piece of writing was written by a person or by an AI tool. A writer sends text to `POST /submit` and gets back a guess, a confidence score, both signal scores, and a plain-language label. If the writer thinks the guess is wrong, they send `POST /appeal` with the `content_id` and their reasoning, and the item is marked `under_review`. Every decision and every appeal is written to `logs/audit.jsonl`.
 
 ## Signals and Scoring
 
-<!-- For each signal: what property it measures, why that might differ between
-     human and AI writing, and WHAT IT CAN'T SEE.
+**Signal one: model signal (`detector.py`).** A local gpt2 model reads the text and measures how predictable it is. Predictable text scores higher, meaning more likely AI. The score runs from 0 to 1. Blind spot: formal, polished human writing is also predictable, so it can read as AI. A polite follow-up email I wrote scored 0.88, higher than an AI-style paragraph at 0.61.
 
-     The blind spot is not optional. If you can't name it you don't understand
-     the signal yet — and unit 8's attack set is built out of blind spots. -->
+**Signal two: style signal (`stylometry.py`).** It measures how much sentence length varies, as the standard deviation divided by the mean. People tend to mix short and long sentences, while AI text is more even, so low variation scores higher (more likely AI). Blind spot: it cannot read. Adding one short sentence, or breaking sentences up, changes the score without changing the content. A one-sentence text has no spread, so it gets a neutral 0.5.
 
-### Signal one — the model signal
-
-**What it measures:**
-
-**Why that might differ between human and AI writing:**
-
-**What it can't see:**
-
-### Signal two — the style signal
-
-**What it measures:**
-
-**Why that might differ between human and AI writing:**
-
-**What it can't see:**
-
-### The combining rule
-
-<!-- Write the rule in words, then give the numbers. What happens when the two
-     signals disagree? -->
-
-**The rule:**
-
-**The numbers:**
-
-**Where it lives:** `scoring.py::combine_signals`
-
-<!-- ⚠️ The grader checks your code against that line. If your rule lives
-     somewhere else, say where. -->
-
-**A case where my two signals split, and what my rule does with it:**
-
-
-
----
+**Combining them.** `scoring.py::combine_signals` averages the two signals (weights 0.5 and 0.5 in `config.py`). A score of 0.35 or below is high-confidence human, 0.65 or above is high-confidence AI, and anything between is unsure.
 
 ## Label Variants
 
-<!-- The exact text of all three labels, as a reader would see them, and the
-     score range each covers.
-
-     Write them for someone who has never heard the word "threshold". -->
-
-| Label | Score range | The exact text a reader sees |
+| Label | Score range | Text the writer sees |
 |---|---|---|
-| high-confidence human |  |  |
-| unsure |  |  |
-| high-confidence AI |  |  |
+| High-confidence human | 0.00 – 0.35 | We think this was probably written by a person. |
+| Unsure | 0.35 – 0.65 | We can't tell for sure whether a person or an AI wrote this. If you wrote it yourself, you can appeal and a person will take a look. |
+| High-confidence AI | 0.65 – 1.00 | This looks like it may have been written with an AI tool. If you wrote it yourself, you can appeal and a person will review it. |
 
 **Why I worded the "unsure" one this way:**
-<!-- It's the hardest of the three. It has to admit uncertainty without
-     sounding like an accusation, because the person reading it may well have
-     written every word themselves. -->
+
+The person reading this may have written every word themselves, so I didn’t want it to sound like an accusation. It admits the system isn’t sure (“We can’t tell for sure”), doesn’t pick a side or show a score, and speaks to the writer as someone who might be the author (“If you wrote it yourself”). It also gives them a next step: they can appeal, and a person will take a look.
 
 
 
@@ -116,58 +71,54 @@
 
 **A submission**
 
-<!-- The response needs content_id, guess, confidence, label, AND both
-     signal scores - model_score and style_score. Unit 8's tools read those
-     two off the response, so leaving them out costs you next unit's
-     diagnostics. -->
-
 ```bash
-$ curl -X POST http://127.0.0.1:5000/submit \
-  -H "Content-Type: application/json" \
-  -d '{"text": "...", "creator_id": "..."}'
+$ curl.exe -X POST http://127.0.0.1:5000/submit -H "Content-Type: application/json" -d "@body.json"
+# body.json: {"text":"honestly i bombed that quiz. my brain was fried after work and i couldnt focus at all, so i just guessed on most of them. whatever. next time i will study.","creator_id":"faith"}
 ```
 
 ```json
-
+{"combined_score":0.14925,"confidence":0.14925,"content_id":"9fdcbd47-a86c-4804-91c6-3c5dc102ea98","guess":"human","label":"We think this was probably written by a person.","model_score":0.2985,"style_score":0.0}
 ```
 
 **An appeal**
 
 ```bash
-$ curl -X POST http://127.0.0.1:5000/appeal \
-  -H "Content-Type: application/json" \
-  -d '{"content_id": "...", "reasoning": "..."}'
+$ curl.exe -X POST http://127.0.0.1:5000/appeal -H "Content-Type: application/json" -d "@appeal.json"
+# appeal.json: {"content_id":"9fdcbd47-a86c-4804-91c6-3c5dc102ea98","reasoning":"I wrote this myself after a stressful shift at work."}
 ```
 
 ```json
-
+{"content_id":"9fdcbd47-a86c-4804-91c6-3c5dc102ea98","message":"Your appeal has been recorded. A person will review this decision.","status":"under_review"}
 ```
 
 **What the log shows afterwards**
 
 ```bash
-$ curl "http://127.0.0.1:5000/log?limit=3"
+$ curl.exe http://127.0.0.1:5000/log
 ```
 
 ```json
-
+{"combined_score":0.14925,"content_id":"9fdcbd47-a86c-4804-91c6-3c5dc102ea98","creator_id":"faith","guess":"human","label":"We think this was probably written by a person.","model_score":0.2985,"status":"decided","style_score":0.0,"timestamp":"2026-11-02T03:05:37+00:00"}
+{"content_id":"9fdcbd47-a86c-4804-91c6-3c5dc102ea98","creator_id":"faith","event":"appeal","reasoning":"I wrote this myself after a stressful shift at work.","status":"under_review","timestamp":"2026-11-02T03:12:08+00:00"}
 ```
 
 ---
+
+
 
 ## How I Used AI
 
 **Moment 1**
 
-- *What I asked for:*
-- *What came back:*
-- *What I changed:*
+- *What I asked for:* Whether my five criteria could be tested by someone who couldn't ask me what I meant.
+- *What came back:* My score-spread target of 1.2–2.0 was impossible, because the detector's scores only run from 0 to 1, and my false-positive target of 3/5 had no pass line.
+- *What I changed:* I ran the detector on a human and an AI sample, saw the real range, and set the spread target to a 0.2 gap and the false-positive limit to at most 1 of 5. When I was short on time, Claude summarized my decisions and I typed them into `criteria.md`; the ideas and the reasoning about writers being wrongly accused were mine.
 
 **Moment 2**
 
-- *What I asked for:*
-- *What came back:*
-- *What I changed:*
+- *What I asked for:* Why `/submit` kept returning the old placeholder response after I'd edited `app.py`.
+- *What came back:* An old server was still running on port 5000 and answering my requests, so my new code never ran.
+- *What I changed:* I stopped every Python process, ran one server only, and re-ran the test. After that the response had both signal scores and a real label.
 
 <!-- ═══════════════════════ UNIT 8 — THE TEST ═══════════════════════ -->
 
