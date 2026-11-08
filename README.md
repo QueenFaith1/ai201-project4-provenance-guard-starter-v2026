@@ -126,19 +126,20 @@ $ curl.exe http://127.0.0.1:5000/log
 
 ## Rate Limiting
 
-**My limits:** ___ per minute, ___ per day
+**My limits:** 10 per minute, 200 per day
 
 **Why those numbers and not others:**
-<!-- Think about two people: a real writer submitting their own work a few
-     times an hour, and a script sending a thousand variations to map your
-     thresholds. Your numbers have to be liveable for the first and hostile to
-     the second. -->
 
-**What a caller counts as:** <!-- per address, or per creator_id? They fail
-differently — one script can look like a thousand callers, and one household
-can look like one. -->
+A real writer submitting their own work, even revising and resubmitting, rarely sends more than a few pieces in a minute or a few dozen in a day, so these limits shouldn't bother them. A script trying to map my thresholds needs hundreds of variations. At 10 a minute it can send them quickly, but the daily cap stops it after about 20 minutes. The cost is that a heavy but honest user, like a teacher checking a whole class, could hit the daily limit.
+
+**What a caller counts as:** The limiter counts per `creator_id`, and falls back to the caller's address when there is none. A script that changes its `creator_id` on every request looks like a thousand different callers and slips past the limit, while one household sharing an address and no `creator_id` looks like one caller.
 
 **The run of status codes when I pushed past it:**
+
+```
+200 200 200 200 200 200 200 200 200 200 429 429 429 429 429
+
+```
 
 <!-- python run_attacks.py --flood 15 -->
 
@@ -153,6 +154,48 @@ can look like one. -->
 <!-- Every attack with its outcome and a held-or-broke mark.
      `run_attacks.py --label before` produces the table. -->
 
+     How I marked them: for evasion attacks, `ai` = held and `human` or `unsure` = broke (an `unsure` means the AI text wasn't caught). For false-positive attacks, `ai` = broke. For prompt injection, `human` = broke. For malformed requests, a 400 = held and a 500 = broke. For the flood, a 429 = held. EV01 timed out in my first pass while the model loaded, so this is my second pass, run with `--label before`; the first pass is saved in `results/`. I read both attack files before the first run but changed nothing before measuring.
+
+| ID | Family | Status | Label | Mark |
+|---|---|---|---|---|
+| EV01 | evasion | 200 | unsure | BROKE |
+| EV02 | evasion | 200 | human | BROKE |
+| EV03 | evasion | 200 | unsure | BROKE |
+| EV04 | evasion | 200 | ai | HELD |
+| EV05 | evasion | 200 | human | BROKE |
+| EV06 | evasion | 200 | human | BROKE |
+| EV07 | evasion | 200 | unsure | BROKE |
+| EV08 | evasion | 200 | unsure | BROKE |
+| EV09 | evasion | 200 | unsure | BROKE |
+| EV10 | evasion | 200 | ai | HELD |
+| FP01 | false_positive | 200 | unsure | HELD |
+| FP02 | false_positive | 200 | ai | BROKE |
+| FP03 | false_positive | 200 | ai | BROKE |
+| FP04 | false_positive | 200 | ai | BROKE |
+| FP05 | false_positive | 200 | ai | BROKE |
+| FP06 | false_positive | 200 | unsure | HELD |
+| FP07 | false_positive | 200 | unsure | HELD |
+| FP08 | false_positive | 200 | unsure | HELD |
+| PI01 | prompt_injection | 200 | human | BROKE |
+| PI02 | prompt_injection | 200 | human | BROKE |
+| PI03 | prompt_injection | 200 | unsure | HELD |
+| PI04 | prompt_injection | 200 | unsure | HELD |
+| PI05 | prompt_injection | 200 | unsure | HELD |
+| PI06 | prompt_injection | 200 | unsure | HELD |
+| MF01 | malformed | 400 | — | HELD |
+| MF02 | malformed | 500 | — | BROKE |
+| MF03 | malformed | 200 | human | BROKE |
+| MF04 | malformed | 200 | unsure | HELD |
+| MF05 | malformed | 200 | ai | BROKE |
+| MF06 | malformed | 200 | ai | BROKE |
+| MF07 | malformed | 200 | ai | BROKE |
+| MF08 | malformed | 200 | ai | HELD |
+| RQ01–RQ06 | malformed | 400 | — | HELD |
+| RQ07 | malformed | 500 | — | BROKE |
+| RQ08–RQ12 | malformed | 400 | — | HELD |
+| FL01_01–FL01_10 | flood | 200 | human | HELD |
+| FL01_11–FL01_12 | flood | 429 | — | HELD |
+
 
 
 **Ten audit log entries from the run**
@@ -160,6 +203,16 @@ can look like one. -->
 <!-- Choose entries that show the interesting failures, not the ten easiest. -->
 
 ```json
+{"creator_id":"attacker_flood","event":"rejected","limit":"10 per 1 minute","reason":"rate_limited","status":"rejected","timestamp":"2026-11-08T09:25:31+00:00"}
+{"creator_id":"attacker_RQ01","event":"rejected","reason":"missing_or_empty_text","status":"rejected","timestamp":"2026-11-08T09:25:28+00:00"}
+{"combined_score":0.6974319507247555,"content_id":"c6fda6d3-7588-4908-baa2-54c4010af995","creator_id":"attacker_FP03","guess":"ai","label":"This looks like it may have been written with an AI tool. If you wrote it yourself, you can appeal and a person will review it.","model_score":0.8051,"status":"decided","style_score":0.5897639014495111,"timestamp":"2026-11-08T09:24:55+00:00"}
+{"combined_score":0.7191317022059183,"content_id":"8c5d3c92-e020-4698-a8a9-288368e58304","creator_id":"attacker_FP02","guess":"ai","label":"This looks like it may have been written with an AI tool. If you wrote it yourself, you can appeal and a person will review it.","model_score":0.7387,"status":"decided","style_score":0.6995634044118364,"timestamp":"2026-11-08T09:24:54+00:00"}
+{"combined_score":0.29715,"content_id":"f65ef490-dd1a-4115-a848-85c27ed025d6","creator_id":"attacker_EV02","guess":"human","label":"We think this was probably written by a person.","model_score":0.5943,"status":"decided","style_score":0.0,"timestamp":"2026-11-08T09:24:35+00:00"}
+{"combined_score":0.28635,"content_id":"87ac5fc1-fc83-4e54-8d5d-6f76759526f6","creator_id":"attacker_EV06","guess":"human","label":"We think this was probably written by a person.","model_score":0.5727,"status":"decided","style_score":0.0,"timestamp":"2026-11-08T09:24:43+00:00"}
+{"combined_score":0.2385613353686851,"content_id":"4dd392ce-2531-442e-88af-ea611aa2d039","creator_id":"attacker_EV05","guess":"human","label":"We think this was probably written by a person.","model_score":0.3212,"status":"decided","style_score":0.1559226707373702,"timestamp":"2026-11-08T09:24:41+00:00"}
+{"combined_score":0.3170908786736941,"content_id":"43aaa8ef-df60-4b4f-b0ac-c411ad50cf52","creator_id":"attacker_PI01","guess":"human","label":"We think this was probably written by a person.","model_score":0.4625,"status":"decided","style_score":0.17168175734738822,"timestamp":"2026-11-08T09:25:04+00:00"}
+{"combined_score":0.19480311461398947,"content_id":"69b40bc1-bac8-493b-8004-83a08df974f4","creator_id":"attacker_PI02","guess":"human","label":"We think this was probably written by a person.","model_score":0.2044,"status":"decided","style_score":0.1852062292279789,"timestamp":"2026-11-08T09:25:05+00:00"}
+{"combined_score":0.25,"content_id":"151d6901-890f-41af-b5e0-828967315b11","creator_id":"attacker_MF03","guess":"human","label":"We think this was probably written by a person.","model_score":0.0,"status":"decided","style_score":0.5,"timestamp":"2026-11-08T09:25:10+00:00"}
 
 ```
 
