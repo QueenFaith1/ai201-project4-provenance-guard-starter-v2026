@@ -140,21 +140,13 @@ A real writer submitting their own work, even revising and resubmitting, rarely 
 200 200 200 200 200 200 200 200 200 200 429 429 429 429 429
 
 ```
-
-<!-- python run_attacks.py --flood 15 -->
-
-```
-
-```
-
 ---
 
 ## Attack Run — Before
 
 <!-- Every attack with its outcome and a held-or-broke mark.
      `run_attacks.py --label before` produces the table. -->
-
-     How I marked them: for evasion attacks, `ai` = held and `human` or `unsure` = broke (an `unsure` means the AI text wasn't caught). For false-positive attacks, `ai` = broke. For prompt injection, `human` = broke. For malformed requests, a 400 = held and a 500 = broke. For the flood, a 429 = held. EV01 timed out in my first pass while the model loaded, so this is my second pass, run with `--label before`; the first pass is saved in `results/`. I read both attack files before the first run but changed nothing before measuring.
+How I marked them: for evasion attacks, `ai` = held and `human` or `unsure` = broke (an `unsure` means the AI text wasn't caught). For false-positive attacks, `ai` = broke. For prompt injection, `human` = broke. For malformed requests, a 400 = held and a 500 = broke. For the flood, a 429 = held. EV01 timed out in my first pass while the model loaded, so this is my second pass, run with `--label before`; the first pass is saved in `results/`. I read both attack files before the first run but changed nothing before measuring.
 
 | ID | Family | Status | Label | Mark |
 |---|---|---|---|---|
@@ -219,7 +211,7 @@ A real writer submitting their own work, even revising and resubmitting, rarely 
 **The single worst outcome** — the one I'd least want to explain to a writer
 whose work got caught by it:
 
-
+FP03 is a real person’s writing, and my system told them it looks like AI because gpt2 found the wording very predictable (model_score 0.805) and the sentence lengths were fairly even (style_score 0.59), so the average, 0.697, crossed the 0.65 line. They’d have no idea that it was written by a human. About 20 of the 56 attacks broke.
 
 ---
 
@@ -229,16 +221,65 @@ whose work got caught by it:
 
 | Criterion | Target | Run 1 | Run 2 | Run 3 | Verdict |
 |---|---|---|---|---|---|
-| 1.  |  |  |  |  |  |
-| 2.  |  |  |  |  |  |
-| 3.  |  |  |  |  |  |
-| 4.  |  |  |  |  |  |
-| 5.  |  |  |  |  |  |
+| 1. Human pieces wrongly flagged | At most 1 of 5 of my own pieces labeled high-confidence AI | 0 of 5 | 0 of 5 | 0 of 5 | MET |
+| 2. Score gap | Average of 5 AI texts at least 0.2 higher than 5 human texts | gap 0.398 | gap 0.398 | gap 0.398 | MET |
+| 3. Label coverage | All 3 labels appear across 10 inputs | all 3 | all 3 | all 3 | MET |
+| 4. Appeals | 5 of 5 appeals return under_review and add a log entry | 5 of 5 | 5 of 5 | 5 of 5 | MET |
+| 5. Bad input | Missing or empty text returns 400 with an error message | 4 of 4 | 4 of 4 | 4 of 4 | MET |
 
 **Real output from one trial**, pasted as text, naming the file and function
 that produced it:
 
+From `run_eval.py::main` calling `app.py::submit`, saved in `results/run_2026-11-08_0921_before.md` (human writing, Trial 1).
+
 ```json
+[
+  {
+    "status": 200,
+    "guess": "unsure",
+    "confidence": 0.358,
+    "model_score": 0.216,
+    "style_score": 0.5,
+    "label": "We can't tell for sure whether a person or an AI wrote this. If you wrote it yourself, you can appeal and a person will take a look.",
+    "sent": "Los angeles is full of diverse people, Armenians who live in glendale "
+  },
+  {
+    "status": 200,
+    "guess": "human",
+    "confidence": 0.31565,
+    "model_score": 0.1313,
+    "style_score": 0.5,
+    "label": "We think this was probably written by a person.",
+    "sent": "Gym bros says the rule to bulking orshredding is eating carbs, lean m"
+  },
+  {
+    "status": 200,
+    "guess": "human",
+    "confidence": 0.27045,
+    "model_score": 0.0409,
+    "style_score": 0.5,
+    "label": "We think this was probably written by a person.",
+    "sent": "Michigan has some great lakes, lake Superior, Sleeping bear dunes, hig"
+  },
+  {
+    "status": 200,
+    "guess": "unsure",
+    "confidence": 0.4431,
+    "model_score": 0.3862,
+    "style_score": 0.5,
+    "label": "We can't tell for sure whether a person or an AI wrote this. If you wrote it yourself, you can appeal and a person will take a look.",
+    "sent": "Data Structures & Algorithms, Sql, Python, Excel are courses in Comput"
+  },
+  {
+    "status": 200,
+    "guess": "unsure",
+    "confidence": 0.45189999999999997,
+    "model_score": 0.4038,
+    "style_score": 0.5,
+    "label": "We can't tell for sure whether a person or an AI wrote this. If you wrote it yourself, you can appeal and a person will take a look.",
+    "sent": "There are 50 states in America, eachpresenting its unique beauty, cul"
+  }
+]
 
 ```
 
