@@ -120,6 +120,30 @@ $ curl.exe http://127.0.0.1:5000/log
 - *What came back:* An old server was still running on port 5000 and answering my requests, so my new code never ran.
 - *What I changed:* I stopped every Python process, ran one server only, and re-ran the test. After that the response had both signal scores and a real label.
 
+Moment 3
+
+What I asked for: Whether 10 per minute and 200 per day were reasonable rate limits, and what 20 and 1250 would change.
+What came back: An explanation of what each number allows, and what a script or an honest heavy user would run into at each.
+What I changed: I kept my own numbers, 10 and 200, and wrote the reasons myself: 10 a minute so an honest writer gets a fast answer, 200 a day to leave room for revisions and appeals.
+
+Moment 4
+
+What I asked for: Test data for my criteria. I asked Claude to write my “human” writing samples, and it refused, because a pass on criterion 1 would mean nothing with text I didn’t write.
+What came back: Claude wrote five AI-style paragraphs for criterion 2 (these are test data, not mine). Claude also typed out my five handwritten pieces from a photo of my notebook.
+What I changed: The five human pieces are my own writing, from my handwriting. The five AI texts were written by Claude, and they’re labeled that way in scenarios.py.
+
+Moment 5
+
+What I asked for: Help diagnosing why MF02 (the single character a) returned a 500.
+What came back: Claude first guessed it was a route problem like RQ07, then told me to test it directly instead of guessing.
+What I changed: I ran detector.model_signal('a') myself and found that signal one raises ValueError("Text is too short to score") and the route never catches it. So MF02 and RQ07 were different bugs in different stages, and my diagnosis says so.
+
+Moment 6
+
+What I asked for: Help writing the diagnoses and the improvement.
+What came back: Claude suggested the groupings, gave me sentence templates with blanks, and wrote the validation code and the appeal_check.py script.
+What I changed: I ran everything, pulled the numbers from my own results files, and filled in or rewrote the blanks and conclusions. A few closing sentences in my diagnoses are Claude’s wording, which I accepted after checking them against my results. I also fixed the indentation errors in app.py myself.
+
 <!-- ═══════════════════════ UNIT 8 — THE TEST ═══════════════════════ -->
 
 ---
