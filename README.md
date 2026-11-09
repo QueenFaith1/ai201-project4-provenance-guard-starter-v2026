@@ -317,14 +317,43 @@ E. Crashes (RQ07, MF02). RQ07 stage: the route (app.py::submit). RQ07 sent a JSO
 
 ## The Improvement
 
-**What I changed:**
+**What I changed:** I added input validation to app.py::submit. It now rejects, with a 400 and a logged rejection: a request body that isn’t a JSON object, text over 20,000 characters, text under 8 words, and text where fewer than 60% of the non space characters are English letters. No signal, threshold, or weight changed.
 
-**Which diagnosis pointed at it:**
+**Which diagnosis pointed at it:** D (junk input labeled with confidence, and no length cap) and E (RQ07 and MF02 returned 500 and left no audit entry).
 
 ### Attack Run — After
 
 <!-- Same format. `run_attacks.py --label after` -->
-
+| ID | Family | Status | Label | Mark |
+|---|---|---|---|---|
+| EV01 | evasion | 200 | unsure | BROKE |
+| EV02 | evasion | 200 | human | BROKE |
+| EV03 | evasion | 200 | unsure | BROKE |
+| EV04 | evasion | 200 | ai | HELD |
+| EV05 | evasion | 200 | human | BROKE |
+| EV06 | evasion | 200 | human | BROKE |
+| EV07 | evasion | 200 | unsure | BROKE |
+| EV08 | evasion | 200 | unsure | BROKE |
+| EV09 | evasion | 200 | unsure | BROKE |
+| EV10 | evasion | 200 | ai | HELD |
+| FP01 | false_positive | 200 | unsure | HELD |
+| FP02 | false_positive | 200 | ai | BROKE |
+| FP03 | false_positive | 200 | ai | BROKE |
+| FP04 | false_positive | 200 | ai | BROKE |
+| FP05 | false_positive | 200 | ai | BROKE |
+| FP06 | false_positive | 200 | unsure | HELD |
+| FP07 | false_positive | 200 | unsure | HELD |
+| FP08 | false_positive | 200 | unsure | HELD |
+| PI01 | prompt_injection | 200 | human | BROKE |
+| PI02 | prompt_injection | 200 | human | BROKE |
+| PI03 | prompt_injection | 200 | unsure | HELD |
+| PI04 | prompt_injection | 200 | unsure | HELD |
+| PI05 | prompt_injection | 200 | unsure | HELD |
+| PI06 | prompt_injection | 200 | unsure | HELD |
+| MF01–MF08 | malformed | 400 | — | HELD |
+| RQ01–RQ12 | malformed | 400 | — | HELD |
+| FL01_01–FL01_10 | flood | 200 | human | HELD |
+| FL01_11–FL01_12 | flood | 429 | — | HELD |
 
 
 **Did it help, and how do I know:**
@@ -332,7 +361,7 @@ E. Crashes (RQ07, MF02). RQ07 stage: the route (app.py::submit). RQ07 sent a JSO
 <!-- Widening the unsure band usually fixes one problem and creates another.
      Reporting that trade honestly is worth full credit. -->
 
-
+It helped with the attacks it was aimed at. Broken attacks went from 20 of 56 to 14 of 56. MF02, MF03, MF05, MF06, MF07, and RQ07 now return 400 instead of a 500 crash or a confident label, and each rejection is in the audit log. My five criteria were unchanged: all MET in all three trials, before and after (results/run_2026-11-09_1023_after.md). It did not touch the other 14. The evasion attacks (EV01 to EV09), the false positives (FP02 to FP05), and the injections (PI01, PI02) are all still broken, because they come from the signals and the combining rule, not from the route. EV08 also still gets through. I expected it to be rejected as too short, but it has 10 words and my minimum is 8. The trade: the rules turn some real writers away. A real person who sends a short note under 8 words, or writes in Arabic or another language that isn’t mostly English letters (like MF07), now gets a 400 instead of a result, and my service can’t judge their writing at all. I chose that because gpt2 is built for English and can’t score those inputs reliably, but the people it excludes are the people who can’t use the service.
 
 ---
 
@@ -341,9 +370,19 @@ E. Crashes (RQ07, MF02). RQ07 stage: the route (app.py::submit). RQ07 sent a JSO
 <!-- For each attack still getting through and each criterion still missed:
      what you'd do, and why you stopped. -->
 
+Still broken after the improvement (14 of 56 attacks):
+
+Evasion (EV01 to EV09). Typos fool signal one, and padding, inserted short sentences, and bolted-on human paragraphs fool signal two. What I’d do: stop averaging the signals blindly, return “unsure” whenever they disagree strongly, and add a third signal that isn’t based on sentence length. Why I stopped: Unit 8 allows one improvement, and changing the combining rule would shift the label for every input, so it needs its own before-and-after measurement.
+False positives (FP02 to FP05). Formal, non native, rubric-style, and technical writing all got labeled “ai” because both signals measure how plain the text is. What I’d do: test on far more non-native and formal human writing, and widen the “unsure” band so plain writing lands there instead of at “ai.” Why I stopped: widening the band lets more AI text through, and I can’t decide that trade without knowing who uses the service.
+Injection (PI01, PI02). Same cause as evasion: the injected short, unusual sentences change the numbers. Same fix as above.
+Heavy human editing (EV05). I don’t think this can be fixed by tuning, because once text is rewritten, surface style can’t show where it came from.
+EV08. Ten words slips past my 8-word minimum. Raising the minimum to 12 would fix it, but it would also reject real short writing like my own 12-word test piece.
+Unhandled errors. My validation covers the inputs I found, but there is no general error handler. Any other unexpected exception in submit() would still return a 500 and leave no audit entry.
+Rate limit bypass. A script that changes its creator_id on every request is counted as a new caller each time.
 
 
 **The trade I'd make if this ran for real:**
+If this ran for real I would widen the “unsure” band so that real writers are rarely accused, because people put real effort into their writing and a wrong accusation costs them more than a missed AI text costs anyone else. That means more AI written text gets through as “human” or “unsure,” and the readers and reviewers who rely on the check would pay for it, because they would have to catch those cases themselves.
 
 <!-- Two sentences. Fewer wrong accusations means more AI text getting through.
      Say which way you'd go and WHO PAYS FOR IT. -->
