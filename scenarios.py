@@ -21,51 +21,48 @@ A scenario carries **either** of these:
               field at all, something enormous. A bad-input criterion needs it,
               because you cannot express "the field is missing" as a string.
 """
-
 SCENARIOS = [
     {
-        "name": "my own writing",
+        "name": "human writing",
         "criterion": 1,
-        # ⚠️ PUT YOUR OWN WRITING HERE. Not AI text, not a sample from the web —
-        # things you actually wrote. This is the criterion that matters most and
-        # it's meaningless with someone else's prose.
         "texts": [
-            "REPLACE ME with a paragraph you wrote yourself.",
-            "REPLACE ME with another one. Ten pieces is the usual number.",
+            "Los angeles is full of diverse people, Armenians who live in glendale black people in inglewood, baldwin hills, Hispanic people in San fernando valley, White people in beverly hills, Santa monica and Asians in Pasadena, San gabriel Valley, it makes the State look like a melting pot",
+            "Gym bros says the rule to bulking or shredding is eating carbs, lean meat & cruciferous veggies, like rice, greenbeans and chicken breast.",
+            "Michigan has some great lakes, lake Superior, Sleeping bear dunes, higgins lake, torch lake.",
+            "Data Structures & Algorithms, Sql, Python, Excel are courses in Computer Science.",
+            "There are 50 states in America, each presenting its unique beauty, culture and people.",
         ],
     },
     {
-        "name": "label coverage",
+        "name": "ai writing",
         "criterion": 2,
-        # Inputs spread across your score range, so you can check all three
-        # labels are actually reachable.
         "texts": [
-            "REPLACE ME with something you're confident is AI-generated.",
-            "REPLACE ME with something you're confident is human-written.",
-            "REPLACE ME with something genuinely borderline.",
+            "Effective time management is essential for academic success. By prioritizing tasks, setting clear goals, and minimizing distractions, students can significantly improve their productivity. Furthermore, consistent routines help build sustainable habits over time. Ultimately, a balanced approach leads to better outcomes and reduced stress.",
+            "Remote work has transformed the modern workplace in several important ways. It offers flexibility, reduces commuting time, and expands access to talent across the globe. However, it also presents challenges such as communication barriers and difficulty maintaining work-life boundaries. Organizations must therefore adopt thoughtful strategies to support their teams.",
+            "Regular physical activity provides numerous benefits for both body and mind. It strengthens the cardiovascular system, improves mood, and enhances overall energy levels. Additionally, exercise can help reduce the risk of chronic conditions. For these reasons, incorporating movement into daily life is highly recommended.",
+            "Renewable energy sources play a crucial role in addressing climate change. Solar and wind power, in particular, have become increasingly cost-effective in recent years. By investing in clean infrastructure, communities can reduce emissions while creating new economic opportunities. A sustainable future depends on continued innovation and collaboration.",
+            "Effective communication is a cornerstone of strong relationships, both personal and professional. It involves not only expressing ideas clearly but also listening attentively to others. When people feel heard and understood, trust naturally develops. Therefore, investing in communication skills yields long-term benefits for everyone involved.",
         ],
     },
-    # A bad-input criterion looks like this. Uncomment and adjust if that's one
-    # of your five — these are raw request bodies, sent exactly as written.
-    #
-    # {
-    #     "name": "bad input",
-    #     "criterion": 3,
-    #     "bodies": [
-    #         {"text": "", "creator_id": "eval_bad_empty"},
-    #         {"creator_id": "eval_bad_missing"},          # no text field at all
-    #         {"text": "word " * 50000, "creator_id": "eval_bad_huge"},
-    #         {"text": None, "creator_id": "eval_bad_null"},
-    #     ],
-    # },
+    {
+        "name": "bad input",
+        "criterion": 5,
+        "bodies": [
+            {"text": "", "creator_id": "eval_bad_empty"},
+            {"creator_id": "eval_bad_missing"},
+            {"text": None, "creator_id": "eval_bad_null"},
+            {"text": "   ", "creator_id": "eval_bad_spaces"},
+        ],
+    },
+]
 
+     
     # TODO: add what your remaining criteria need.
     #
     # A criterion about the appeal path can't be tested by sending text alone;
     # it needs a submission first and then an appeal against the content_id
     # that came back. You'll need to test that one by hand, or extend this file
     # and run_eval.py to do it. Saying which you did is part of the write-up.
-]
 
 
 def validate() -> list[str]:

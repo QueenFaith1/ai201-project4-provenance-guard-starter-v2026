@@ -207,12 +207,15 @@ def submit():
     # TODO: delete this and build the route.
 
 
-
-
     payload = request.get_json(silent=True) or {}
+
+    if not isinstance(payload, dict):
+        audit.log_rejection(creator_id="unknown", reason="body_not_an_object")
+        return jsonify({"error": "bad_request", "message": "request body must be a JSON object"}), 400
 
     text = payload.get("text")
     creator_id = payload.get("creator_id")
+
 
     if not isinstance(text, str) or not text.strip():
         audit.log_rejection(
@@ -223,12 +226,28 @@ def submit():
     if not isinstance(creator_id, str) or not creator_id.strip():
         audit.log_rejection(creator_id="unknown", reason="missing_creator_id")
         return jsonify({"error": "bad_request", "message": "creator_id is required"}), 400
-    
+
+
+    words = text.split()
+    visible = [c for c in text if not c.isspace()]
+    latin = sum(1 for c in visible if c.isascii() and c.isalpha())
+    reason = None
+    if len(text) > 20000:
+        reason, message = "text_too_long", "text is too long (max 20000 characters)"
+    elif len(words) < 8:
+        reason, message = "text_too_short", "text is too short to score (at least 8 words)"
+    elif not visible or latin / len(visible) < 0.6:
+        reason, message = "unsupported_text", "text must be mostly English letters"
+    if reason:
+        audit.log_rejection(creator_id=creator_id, reason=reason)
+        return jsonify({"error": "bad_request", "message": message}), 400
+
     content_id = str(uuid.uuid4())
     model_score = detector.model_signal(text)
     style_score = stylometry.style_signal(text)
     combined_score = scoring.combine_signals(model_score, style_score)
     guess, label_text = scoring.score_to_label(combined_score)
+
 
     audit.log_decision(
         content_id=content_id,
